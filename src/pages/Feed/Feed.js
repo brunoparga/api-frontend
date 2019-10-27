@@ -106,17 +106,17 @@ class Feed extends Component {
       editLoading: true
     });
     // Set up data (with image!)
+    const formData = new FormData();
+    ['title', 'content', 'image'].forEach((prop) => {
+      formData.append(prop, postData[prop])
+    })
     let url = 'http://localhost:8080/feed/post';
     let method = 'POST';
     if (this.state.editPost) {
       url = 'URL';
     }
 
-    fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json'},
-      body: JSON.stringify(postData),
-    })
+    fetch(url, { method, body: formData })
       .then(res => {
         if (res.status !== 200 && res.status !== 201) {
           throw new Error('Creating or editing a post failed!');
