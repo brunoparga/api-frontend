@@ -167,7 +167,7 @@ class FeedEdit extends Component {
             <div className="new-post__preview-image">
               {!this.state.imagePreview && <p>Please choose an image.</p>}
               {this.state.imagePreview && (
-                <Image imageUrl={this.state.imagePreview} contain left />
+                <Image imageURL={this.state.imagePreview} contain left />
               )}
             </div>
             <Input

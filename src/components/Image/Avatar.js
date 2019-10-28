@@ -8,7 +8,7 @@ const avatar = props => (
     className="avatar"
     style={{ width: props.size + 'rem', height: props.size + 'rem' }}
   >
-    <Image imageUrl={props.image} />
+    <Image imageURL={props.image} />
   </div>
 );
 

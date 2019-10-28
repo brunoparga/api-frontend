@@ -6,7 +6,7 @@ const image = props => (
   <div
     className="image"
     style={{
-      backgroundImage: `url('${props.imageUrl}')`,
+      backgroundImage: `url('${props.imageURL}')`,
       backgroundSize: props.contain ? 'contain' : 'cover',
       backgroundPosition: props.left ? 'left' : 'center'
     }}
