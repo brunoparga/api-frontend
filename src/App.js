@@ -17,7 +17,7 @@ class App extends Component {
   state = {
     showBackdrop: false,
     showMobileNav: false,
-    isAuth: true,
+    isAuth: false,
     token: null,
     userId: null,
     authLoading: false,
@@ -100,7 +100,17 @@ class App extends Component {
   signupHandler = (event, authData) => {
     event.preventDefault();
     this.setState({ authLoading: true });
-    fetch('URL')
+    const userData = {};
+    ['email', 'password', 'name'].forEach((prop) => {
+      userData[prop] = authData.signupForm[prop].value
+    })
+    fetch('http://localhost:8080/auth/signup',{
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(userData)
+    })
       .then(res => {
         if (res.status === 422) {
           throw new Error(
