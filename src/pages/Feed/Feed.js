@@ -117,33 +117,36 @@ class Feed extends Component {
     this.setState({
       editLoading: true
     });
-    // Set up data (with image!)
-    const formData = new FormData();
-    ['title', 'content', 'image'].forEach((prop) => {
-      formData.append(prop, postData[prop])
-    })
-    let url = 'http://localhost:8080/feed/post';
-    let method = 'POST';
-    if (this.state.editPost) {
-      url = `http://localhost:8080/feed/post/${this.state.editPost._id}`;
-      method = 'PUT';
+    const postInputData = ['title', 'content'].reduce((str, prop) => {
+      // const url = (prop === 'image' ? 'URL' : '');
+      return `${str}\n${prop}: "${postData[prop].trim()}",`
+    }, '')
+    const graphqlQuery = {
+      query: `mutation {
+        createPost(postInput: { ${postInputData}
+          imageURL: "https://www.publicdomainpictures.net/pictures/290000/velka/pegasus-statue-1548334958QWK.jpg" } )
+        { _id title content imageURL creator { name } createdAt } }`
     }
-
-    fetch(url, {
-      method,
+    fetch('http://localhost:8080/graphql', {
+      method: 'POST',
       headers: {
-        Authorization: `Bearer ${this.props.token}`
+        Authorization: `Bearer ${this.props.token}`,
+        'Content-Type': 'application/json'
       },
-      body: formData,
+      body: JSON.stringify(graphqlQuery),
     })
       .then(res => {
-        if (res.status !== 200 && res.status !== 201) {
-          throw new Error('Creating or editing a post failed!');
-        }
         return res.json();
       })
       .then(resData => {
-        this.setState(prevState => {          
+        console.log(resData.errors)
+        if (resData.errors && resData.errors[0].status === 422) {
+          throw new Error('Validation failed.')
+        } else if (resData.errors) {
+          throw new Error('Post creation failed.')
+        }
+        console.log(resData)
+        this.setState(prevState => {
           return {
             isEditing: false,
             editPost: null,
