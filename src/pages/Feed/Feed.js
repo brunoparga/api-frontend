@@ -52,20 +52,40 @@ class Feed extends Component {
       page--;
       this.setState({ postPage: page });
     }
-    fetch(`http://localhost:8080/feed/posts?page=${page}`, {
-      headers: { Authorization: `Bearer ${this.props.token}` },
+    const query = `{
+      posts {
+        posts {
+          _id
+          title
+          content
+          creator {
+            name
+          }
+          createdAt
+        }
+        totalPosts
+      }
+    }`
+    // fetch(`http://localhost:8080/graphql`, {
+    fetch(`http://localhost:8080/graphql?page=${page}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${this.props.token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query })
     })
       .then(res => {
-        if (res.status !== 200) {
-          throw new Error('Failed to fetch posts.');
-        }
         return res.json();
       })
-      .then(data => {
-        const posts = data.posts.map((post) => ({ ...post, imagePath: post.imageURL }))
+      .then(({ data }) => {
+        if (!data.posts) {
+          throw new Error('Fetching posts failed.')
+        }
+        // const posts = data.posts.map((post) => ({ ...post, imagePath: post.imageURL }))
         this.setState({
-          posts,
-          totalPosts: data.totalItems,
+          posts: data.posts.posts,
+          totalPosts: data.totalPosts,
           postsLoading: false
         });
       })
@@ -139,15 +159,25 @@ class Feed extends Component {
         return res.json();
       })
       .then(resData => {
-        console.log(resData.errors)
         if (resData.errors && resData.errors[0].status === 422) {
           throw new Error('Validation failed.')
         } else if (resData.errors) {
           throw new Error('Post creation failed.')
         }
-        console.log(resData)
+        const post = (({ _id, title, content, creator, createdAt }) => (
+          { _id, title, content, creator, createdAt }))(resData.data.createPost)
         this.setState(prevState => {
+          let updatedPosts = [...prevState.posts];
+          if (prevState.editPost) {
+            const postIndex = prevState.posts.findIndex(
+              p => p._id === prevState.editPost._id
+            );
+            updatedPosts[postIndex] = post;
+          } else {
+            updatedPosts.unshift(post);
+          }
           return {
+            posts: updatedPosts,
             isEditing: false,
             editPost: null,
             editLoading: false
