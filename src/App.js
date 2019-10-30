@@ -59,13 +59,16 @@ class App extends Component {
   loginHandler = (event, authData) => {
     event.preventDefault();
     this.setState({ authLoading: true });
-    const { email, password } = authData;
-    fetch('http://localhost:8080/auth/login', {
+    const userData = ['email', 'password'].reduce((str, prop) => {
+      return `${str}\n${prop}: "${authData[prop]}",`
+    }, '')
+    const graphqlQuery = { query: `{ login(${userData}) { token userId } }` }
+    fetch('http://localhost:8080/graphql', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify(graphqlQuery),
     })
       .then(res => {
         if (res.status === 422) {
@@ -79,14 +82,19 @@ class App extends Component {
       })
       .then(resData => {
         console.log(resData);
+        if (resData.errors && resData.errors[0] === 422) {
+          throw new Error('Validation failed.')
+        } else if (resData.errors) {
+          throw new Error('Login failed.')
+        }
         this.setState({
           isAuth: true,
-          token: resData.token,
+          token: resData.data.login.token,
           authLoading: false,
-          userId: resData.userId
+          userId: resData.data.login.userId
         });
-        localStorage.setItem('token', resData.token);
-        localStorage.setItem('userId', resData.userId);
+        localStorage.setItem('token', resData.data.login.token);
+        localStorage.setItem('userId', resData.data.login.userId);
         const remainingMilliseconds = 60 * 60 * 1000;
         const expiryDate = new Date(
           new Date().getTime() + remainingMilliseconds
@@ -111,16 +119,9 @@ class App extends Component {
       return `${str}\n${prop}: "${authData.signupForm[prop].value}",`
     }, '')
     const graphqlQuery = {
-      query: `
-        mutation {
-          createUser(userInput: { ${userInputData} }) {
-            _id
-            email
-          }
-        }
-      `
+      query: `mutation { createUser(userInput: { ${userInputData} }) { _id email } }`
     }
-    fetch('http://localhost:8080/graphql',{
+    fetch('http://localhost:8080/graphql', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -133,7 +134,7 @@ class App extends Component {
         if (resData.errors && resData.errors[0] === 422) {
           throw new Error(
             `The address ${authData.signupForm.email.value} is already in use.`
-            )
+          )
         } else if (resData.errors) {
           throw new Error('User creation failed.')
         }
