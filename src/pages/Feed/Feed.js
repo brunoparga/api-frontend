@@ -190,7 +190,9 @@ class Feed extends Component {
             );
             updatedPosts[postIndex] = post;
           } else {
-            updatedPosts.pop()
+            if (prevState.posts.length >= 2) {
+              updatedPosts.pop();
+            }
             updatedPosts.unshift(post);
           }
           return {
@@ -218,14 +220,19 @@ class Feed extends Component {
 
   deletePostHandler = postId => {
     this.setState({ postsLoading: true });
-    fetch(`http://localhost:8080/feed/post/${postId}`, {
-      method: 'DELETE',
+    fetch(`http://localhost:8080/graphql`, {
+      method: 'POST',
       headers: {
-        Authorization: `Bearer ${this.props.token}`
+        Authorization: `Bearer ${this.props.token}`,
+        'Content-Type': 'application/json'
       },
+      body: JSON.stringify({
+        query: `mutation { deletePost(_id: "${postId}") }`
+      }),
     })
-      .then(res => {
-        if (res.status !== 200 && res.status !== 201) {
+      .then(res => res.json())
+      .then(({ data }) => {
+        if (!data.deletePost) {
           throw new Error('Deleting a post failed!');
         }
         this.loadPosts();
