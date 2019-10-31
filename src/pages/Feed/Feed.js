@@ -155,8 +155,15 @@ class Feed extends Component {
         }, '')
         const graphqlQuery = {
           query: `mutation {
-        createPost(postInput: { ${queryData} imageURL: "${data.imageURL}" } )
-        { _id title content imageURL creator { name } createdAt } }`
+            ${this.state.editPost ? 'upd' : 'cre'}atePost(
+              ${this.state.editPost ? `_id: "${this.state.editPost._id}",` : ''}
+              postInput: {
+                ${queryData}
+                imageURL: "${data.imageURL}"
+              }
+            )
+            { _id title content imageURL creator { name } createdAt }
+          }`
         }
         return fetch('http://localhost:8080/graphql', {
           method: 'POST',
@@ -174,8 +181,7 @@ class Feed extends Component {
         } else if (resData.errors) {
           throw new Error('Post creation failed.')
         }
-        const post = (({ _id, title, content, creator, createdAt, imageURL }) => (
-          { _id, title, content, creator, createdAt, imageURL }))(resData.data.createPost)
+        const post = resData.data.createPost || resData.data.updatePost
         this.setState(prevState => {
           let updatedPosts = [...prevState.posts];
           if (prevState.editPost) {
