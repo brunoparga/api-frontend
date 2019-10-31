@@ -53,7 +53,7 @@ class Feed extends Component {
       this.setState({ postPage: page });
     }
     const query = `{
-      posts {
+      posts(page: ${page}) {
         posts {
           _id
           title
@@ -66,8 +66,7 @@ class Feed extends Component {
         totalPosts
       }
     }`
-    // fetch(`http://localhost:8080/graphql`, {
-    fetch(`http://localhost:8080/graphql?page=${page}`, {
+    fetch('http://localhost:8080/graphql', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${this.props.token}`,
@@ -174,6 +173,7 @@ class Feed extends Component {
             );
             updatedPosts[postIndex] = post;
           } else {
+            updatedPosts.pop()
             updatedPosts.unshift(post);
           }
           return {
