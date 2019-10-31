@@ -59,28 +59,32 @@ class Feed extends Component {
       page--;
       this.setState({ postPage: page });
     }
-    const query = `{
-      posts(page: ${page}) {
-        posts {
-          _id
-          title
-          content
-          imageURL
-          creator {
-            name
+    const graphqlQuery = {
+      query: `
+        query FetchPosts($page: Int!) {
+          posts(page: $page) {
+            posts {
+              _id
+              title
+              content
+              imageURL
+              creator {
+                name
+              }
+              createdAt
+            }
+            totalPosts
           }
-          createdAt
-        }
-        totalPosts
-      }
-    }`
+        }`,
+      variables: { page }
+    }
     fetch('http://localhost:8080/graphql', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${this.props.token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ query })
+      body: JSON.stringify(graphqlQuery)
     })
       .then(res => {
         return res.json();
@@ -100,17 +104,19 @@ class Feed extends Component {
 
   statusUpdateHandler = event => {
     event.preventDefault();
+    const graphqlQuery = {
+      query: `mutation UpdateUserStatus($userStatus: String!) {
+          updateStatus(status: $userStatus )
+          { status } }`,
+      variables: { userStatus: this.state.status }
+    }
     fetch('http://localhost:8080/graphql', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${this.props.token}`,
         'Content-Type': 'application/json',
       },
-      // body: JSON.stringify({ status: this.state.status }),
-      body: JSON.stringify({
-        query: `mutation { updateStatus(status: "${this.state.status}" )
-          { status } }`
-      })
+      body: JSON.stringify(graphqlQuery)
     })
       .then(res => {
         return res.json();
@@ -161,21 +167,22 @@ class Feed extends Component {
     })
       .then((res) => res.json())
       .then((data) => {
-        const queryData = ['title', 'content'].reduce((str, prop) => {
-          return `${str}\n${prop}: "${postData[prop].trim()}",`
-        }, '')
-        const graphqlQuery = {
-          query: `mutation {
-            ${this.state.editPost ? 'upd' : 'cre'}atePost(
-              ${this.state.editPost ? `_id: "${this.state.editPost._id}",` : ''}
-              postInput: {
-                ${queryData}
-                imageURL: "${data.imageURL}"
-              }
-            )
-            { _id title content imageURL creator { name } createdAt }
-          }`
+        const { title, content } = postData;
+        const variables = { title, content, imageURL: data.imageURL || 'unchanged' };
+        const sharedQuery = `postInput: {
+                title: $title, content: $content, imageURL: $imageURL })
+            { _id title content imageURL creator { name } createdAt } }`;
+        let query = `mutation CreatePost(
+            $title: String!, $content: String!, $imageURL: String!) {
+            createPost(${sharedQuery}`;
+        if (this.state.editPost) {
+          variables._id = this.state.editPost._id;
+          query = `mutation UpdatePost(
+              $_id: ID!, $title: String!, $content: String!, $imageURL: String!) {
+              updatePost(_id: $_id, ${sharedQuery}`;
         }
+        const graphqlQuery = { query, variables };
+        console.log(graphqlQuery)
         return fetch('http://localhost:8080/graphql', {
           method: 'POST',
           headers: {

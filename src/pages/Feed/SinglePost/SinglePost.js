@@ -21,8 +21,11 @@ class SinglePost extends Component {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        query: `{ post(_id: "${postId}") {
-          title creator { name } imageURL createdAt content } }`
+        query: `query FetchSinglePost($_id: ID!)
+          { post(_id: $_id) {
+          title creator { name } imageURL createdAt content }
+        }`,
+        variables: { _id: postId }
       })
     })
       .then(res => {

@@ -59,10 +59,12 @@ class App extends Component {
   loginHandler = (event, authData) => {
     event.preventDefault();
     this.setState({ authLoading: true });
-    const userData = ['email', 'password'].reduce((str, prop) => {
-      return `${str}\n${prop}: "${authData[prop]}",`
-    }, '')
-    const graphqlQuery = { query: `{ login(${userData}) { token userId } }` }
+    const variables = (({ email, password }) => ({ email, password }))(authData)
+    const graphqlQuery = {
+      query: `query UserLogin($email: String!, $password: String!)
+      { login(email: $email, password: $password) { token userId } }`,
+      variables
+    }
     fetch('http://localhost:8080/graphql', {
       method: 'POST',
       headers: {
@@ -114,11 +116,20 @@ class App extends Component {
   signupHandler = (event, authData) => {
     event.preventDefault();
     this.setState({ authLoading: true });
-    const userInputData = ['email', 'password', 'name'].reduce((str, prop) => {
-      return `${str}\n${prop}: "${authData.signupForm[prop].value}",`
-    }, '')
+    const variables = ['email', 'password', 'name'].reduce((obj, prop) => {
+      obj[prop] = authData.signupForm[prop].value
+      return obj
+    }, {})
     const graphqlQuery = {
-      query: `mutation { createUser(userInput: { ${userInputData} }) { _id email } }`
+      query: `mutation
+        UserSignup($email: String!, $password: String!, $name: String!)
+        {
+          createUser(
+          userInput: { email: $email, password: $password, name: $name }
+          )
+          { _id email }
+        }`,
+      variables
     }
     fetch('http://localhost:8080/graphql', {
       method: 'POST',
