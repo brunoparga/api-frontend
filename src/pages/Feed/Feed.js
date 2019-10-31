@@ -58,6 +58,7 @@ class Feed extends Component {
           _id
           title
           content
+          imageURL
           creator {
             name
           }
@@ -81,7 +82,6 @@ class Feed extends Component {
         if (!data.posts) {
           throw new Error('Fetching posts failed.')
         }
-        // const posts = data.posts.map((post) => ({ ...post, imagePath: post.imageURL }))
         this.setState({
           posts: data.posts.posts,
           totalPosts: data.totalPosts,
@@ -136,35 +136,46 @@ class Feed extends Component {
     this.setState({
       editLoading: true
     });
-    const postInputData = ['title', 'content'].reduce((str, prop) => {
-      // const url = (prop === 'image' ? 'URL' : '');
-      return `${str}\n${prop}: "${postData[prop].trim()}",`
-    }, '')
-    const graphqlQuery = {
-      query: `mutation {
-        createPost(postInput: { ${postInputData}
-          imageURL: "https://www.publicdomainpictures.net/pictures/290000/velka/pegasus-statue-1548334958QWK.jpg" } )
-        { _id title content imageURL creator { name } createdAt } }`
+    const formData = new FormData()
+    formData.append('image', postData.image);
+    if (this.state.editPost) {
+      formData.append('oldPath', this.state.editPost.imageURL)
     }
-    fetch('http://localhost:8080/graphql', {
-      method: 'POST',
+    fetch('http://localhost:8080/post-image', {
+      method: 'PUT',
       headers: {
         Authorization: `Bearer ${this.props.token}`,
-        'Content-Type': 'application/json'
       },
-      body: JSON.stringify(graphqlQuery),
+      body: formData,
     })
-      .then(res => {
-        return res.json();
+      .then((res) => res.json())
+      .then((data) => {
+        const queryData = ['title', 'content'].reduce((str, prop) => {
+          return `${str}\n${prop}: "${postData[prop].trim()}",`
+        }, '')
+        const graphqlQuery = {
+          query: `mutation {
+        createPost(postInput: { ${queryData} imageURL: "${data.imageURL}" } )
+        { _id title content imageURL creator { name } createdAt } }`
+        }
+        return fetch('http://localhost:8080/graphql', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${this.props.token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(graphqlQuery),
+        });
       })
+      .then(res => res.json())
       .then(resData => {
         if (resData.errors && resData.errors[0].status === 422) {
           throw new Error('Validation failed.')
         } else if (resData.errors) {
           throw new Error('Post creation failed.')
         }
-        const post = (({ _id, title, content, creator, createdAt }) => (
-          { _id, title, content, creator, createdAt }))(resData.data.createPost)
+        const post = (({ _id, title, content, creator, createdAt, imageURL }) => (
+          { _id, title, content, creator, createdAt, imageURL }))(resData.data.createPost)
         this.setState(prevState => {
           let updatedPosts = [...prevState.posts];
           if (prevState.editPost) {
