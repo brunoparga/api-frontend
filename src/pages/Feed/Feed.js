@@ -95,7 +95,7 @@ class Feed extends Component {
         }
         this.setState({
           posts: data.posts.posts,
-          totalPosts: data.totalPosts,
+          totalPosts: data.posts.totalPosts,
           postsLoading: false
         });
       })
